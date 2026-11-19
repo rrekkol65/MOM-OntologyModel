@@ -1,0 +1,5 @@
+__pycache__/
+backend/*.sqlite3*
+inputs/
+work/
+outputs/

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOM 产品知识图谱与问答库</title>
+<style>
+:root{
+  --bg:#f4f6fa; --panel:#ffffff; --panel-2:#fafbfd; --border:#e4e8f0; --border-2:#eef1f6;
+  --text:#1b2436; --muted:#6b7688; --sub:#94a0b4;
+  --primary:#2563eb; --primary-soft:#eaf1ff;
+  --exist:#0d9488; --exist-soft:#e3f7f3; --sugg:#e08700; --sugg-soft:#fff3e0;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.06);
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;overflow:hidden}
+.app{display:grid;grid-template-columns:250px 1fr;height:100vh}
+
+/* Sidebar */
+.sidebar{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;z-index:5}
+.brand{padding:20px 18px 14px;border-bottom:1px solid var(--border-2)}
+.brand .logo{display:flex;align-items:center;gap:10px}
+.brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#2563eb,#4f46e5);display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:0 4px 12px rgba(37,99,235,.28)}
+.brand h1{font-size:15px;font-weight:700;letter-spacing:.2px}
+.brand .sub{font-size:11px;color:var(--muted);margin-top:1px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 16px}
+.stat{background:var(--panel-2);border:1px solid var(--border-2);border-radius:10px;padding:8px 10px}
+.stat .n{font-size:18px;font-weight:750;line-height:1.1;color:var(--primary)}
+.stat .l{font-size:11px;color:var(--muted);margin-top:2px}
+.nav{padding:4px 12px 10px}
+.nav-title{font-size:11px;color:var(--sub);letter-spacing:.8px;padding:10px 8px 6px;font-weight:700}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:600;font-size:13px;transition:.15s}
+.nav-item:hover{background:var(--panel-2);color:var(--text)}
+.nav-item.active{background:var(--primary-soft);color:var(--primary)}
+.nav-item .ico{width:18px;text-align:center;font-size:15px}
+.nav-item .cnt{margin-left:auto;font-size:10px;background:var(--bg);color:var(--sub);padding:1px 7px;border-radius:10px}
+.side-sec{padding:6px 14px 12px;border-top:1px solid var(--border-2)}
+.side-sec .hd{font-size:11px;color:var(--sub);letter-spacing:.6px;font-weight:700;margin:10px 4px 8px}
+.seg{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);flex:1}
+.seg button.active{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(16,24,40,.1)}
+.toggle{display:flex;align-items:center;gap:9px;padding:6px;cursor:pointer;border-radius:8px;font-size:12.5px;color:var(--text)}
+.toggle:hover{background:var(--panel-2)}
+.toggle input{display:none}
+.tg{width:32px;height:18px;border-radius:10px;background:#cfd6e2;position:relative;transition:.2s;flex:none}
+.tg::after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked+.tg{background:var(--primary)}
+.toggle input:checked+.tg::after{left:16px}
+.tag-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.prod-list{display:flex;flex-direction:column;gap:2px;max-height:150px;overflow-y:auto;padding-right:2px}
+.prod-mini{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:12.5px}
+.prod-mini:hover,.prod-mini.sel{background:var(--panel-2)}
+.prod-mini .cd{width:8px;height:8px;border-radius:50%;flex:none}
+.prod-mini .nm{flex:1;color:var(--text)}
+.prod-mini .ab{font-size:10px;color:var(--sub);font-weight:700}
+
+/* Main */
+.main{display:flex;flex-direction:column;overflow:hidden;position:relative}
+.topbar{height:58px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:14px;flex:none}
+.topbar h2{font-size:16px;font-weight:700}
+.crumb{color:var(--muted);font-size:12.5px;display:flex;align-items:center;gap:6px;margin-left:4px}
+.crumb b{color:var(--primary);font-weight:600}
+.crumb .sep{color:var(--sub)}
+.spacer{flex:1}
+.icon-btn{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--muted);font-size:12px;font-weight:600}
+.icon-btn:hover{background:var(--panel-2);color:var(--primary)}
+.icon-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.icon-btn.primary:hover{background:#1d4ed8}
+.content{flex:1;position:relative;overflow:hidden}
+.view{position:absolute;inset:0;display:none;flex-direction:column}
+.view.active{display:flex}
+
+/* graph */
+.shared-foundation{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 20px;background:var(--panel);border-bottom:1px solid var(--border-2);color:var(--muted);font-size:12px}
+.shared-foundation[hidden]{display:none}
+.shared-foundation .icon-btn{text-align:left}
+.shared-foundation small{color:var(--muted);margin-left:6px}
+.function-index-controls{display:grid;gap:8px;margin-bottom:10px}
+.function-index-controls input,.function-index-controls select{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;color:var(--text);background:var(--panel)}
+.function-index-list{display:grid;gap:6px}
+.function-index-list button{text-align:left;white-space:normal}
+.function-index-list small{display:block;margin-top:3px;color:var(--muted)}
+.feature-share label{display:block;margin-bottom:6px;color:var(--muted)}
+.feature-share>div{display:flex;gap:6px}
+.feature-share input{min-width:0;flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;color:var(--text);background:var(--panel)}
+.feature-share [role=status]{display:block;margin-top:4px;font-size:12px;color:var(--muted)}
+.graph-stage{flex:1;position:relative;min-height:0}
+.graph-wrap{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#fff 0%,#f8fafd 70%,#f2f5fa 100%)}
+#graph{width:100%;height:100%;display:block;cursor:grab}
+#graph.grabbing{cursor:grabbing}
+.graph-tools{position:absolute;right:18px;bottom:18px;display:flex;flex-direction:column;gap:6px}
+.graph-tools button{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:#fff;box-shadow:var(--shadow);cursor:pointer;font-size:16px;color:var(--muted)}
+.graph-tools button:hover{color:var(--primary)}
+.legend{position:absolute;left:18px;bottom:18px;background:rgba(255,255,255,.94);border:1px solid var(--border);border-radius:11px;padding:10px 13px;box-shadow:var(--shadow);font-size:12px}
+.legend .row{display:flex;align-items:center;gap:8px;margin:3px 0;color:var(--muted)}
+.legend .ln{width:26px;height:0;border-top:2.5px solid var(--exist)}
+.legend .nd{width:11px;height:11px;border-radius:50%;background:var(--primary)}
+.legend .ttl{font-weight:700;color:var(--text);margin-bottom:4px;font-size:11px;letter-spacing:.4px}
+.hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);font-size:11.5px;color:var(--sub);background:rgba(255,255,255,.85);padding:5px 12px;border-radius:20px;border:1px solid var(--border-2);white-space:nowrap}
+.dim-bar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--border-2);flex:none;flex-wrap:wrap}
+.dim-bar label[hidden]{display:none}
+.dim-bar label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dim-bar select{border:1px solid var(--border);border-radius:7px;padding:5px 9px;font-size:12px;color:var(--text);background:#fff;max-width:190px}
+.node-label{font-size:11px;font-weight:700;fill:#fff;pointer-events:none;text-anchor:middle}
+.node-sub{font-size:8.5px;fill:var(--muted);pointer-events:none;text-anchor:middle}
+#graphWrap,#graphWrap *{user-select:none;-webkit-user-select:none}
+.legend .ln.planning{border-top:2.5px dashed #2563eb}
+.edge-lbl{font-size:10px;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:var(--panel);stroke-width:3px;stroke-linejoin:round}
+.edge:focus-visible,.edge:hover{stroke-width:4;outline:none}
+/* 聚焦弱化：无关节点与边淡出 */
+.node,.edge,.edge-lbl{transition:opacity .22s ease}
+.node.dim,.edge.dim,.edge-lbl.dim{opacity:.07!important}
+/* 节点缩放动画（双层结构：外层定位，内层 core 缩放） */
+.node-core{transform-origin:0 0;transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+.node:hover .node-core{transform:scale(1.14)}
+.node.dragging .node-core{transform:scale(1.24);filter:drop-shadow(0 6px 12px rgba(15,23,42,.3))}
+.node.rebound .node-core{animation:node-rebound .52s cubic-bezier(.34,1.56,.64,1)}
+@keyframes node-rebound{0%{transform:scale(1.24)}45%{transform:scale(.9)}75%{transform:scale(1.07)}100%{transform:scale(1)}}
+.vp{animation:vp-in .28s ease-out}
+@keyframes vp-in{from{opacity:0}to{opacity:1}}
+.node.focused .core{stroke:#1e293b;stroke-width:3.5}
+/* 外部引用节点：虚线描边 + 产品角标 */
+.node.ext .core{stroke-dasharray:4 3;stroke-width:2}
+.node.ext .ext-tag{font-size:8px;font-weight:800;pointer-events:none;text-anchor:middle;fill:#fff}
+
+/* Business trace */
+.trace-requirements{padding:9px 22px;border-bottom:1px solid var(--border);max-height:30%;overflow:auto;font-size:13px}
+.trace-requirements summary{cursor:pointer;font-weight:600}
+.trace-requirements p{margin:8px 0}
+.trace-options{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.trace-options[hidden]{display:none}
+.trace-edge.planned{stroke-dasharray:6 4}
+.trace-canvas{flex:1;overflow:auto;background:radial-gradient(var(--border) 1px,transparent 1px) 0 0/20px 20px}
+.trace-map{position:relative}
+.trace-map svg{position:absolute;inset:0}
+.trace-edge{fill:none;stroke:#64748b;stroke-width:2}
+.trace-edge:hover,.trace-edge:focus,.trace-edge.active{stroke:#2563eb;stroke-width:5;outline:none;cursor:pointer}
+.trace-node{position:absolute;width:200px;height:64px;text-align:left;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:var(--text);box-shadow:var(--shadow);cursor:pointer}
+.trace-node strong,.trace-node small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trace-node small{color:var(--muted);margin-top:5px}
+.trace-node:hover,.trace-node[aria-pressed=true]{border-color:var(--primary);background:#eff6ff}
+.trace-details{max-height:38%;overflow:auto;padding:14px 22px;border-top:1px solid var(--border);background:var(--panel)}
+.trace-details h3{margin:0 0 8px}
+.trace-details p,.trace-details li{overflow-wrap:anywhere}
+.trace-details button{margin:2px 4px 2px 0;white-space:normal;text-align:left}
+
+/* interface */
+.if-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.if-tools{display:flex;align-items:center;gap:10px;padding:14px 22px;border-bottom:1px solid var(--border-2);flex-wrap:wrap}
+.if-tools input,.if-tools select{border:1px solid var(--border);border-radius:8px;padding:8px 11px;font-size:12.5px;color:var(--text);background:#fff}
+.if-tools input{flex:1;min-width:180px}
+.if-count{font-size:12px;color:var(--muted);padding:9px 22px}
+.if-list{flex:1;overflow-y:auto;padding:4px 22px 28px}
+table.tif{width:100%;border-collapse:collapse;background:var(--panel);border-radius:11px;overflow:hidden;box-shadow:var(--shadow);font-size:12px}
+table.tif th{background:var(--panel-2);color:var(--muted);font-weight:700;text-align:left;padding:10px 11px;font-size:11px;white-space:nowrap;border-bottom:1px solid var(--border)}
+table.tif td{padding:9px 11px;border-bottom:1px solid var(--border-2);color:var(--text);vertical-align:top}
+table.tif tr:hover td{background:var(--panel-2)}
+table.tif td.act{cursor:pointer;color:var(--primary);font-weight:600;white-space:nowrap}
+.st{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap}
+.st.todo{background:var(--sugg-soft);color:var(--sugg)}
+.st.ok{background:var(--exist-soft);color:var(--exist)}
+.st.plan{background:#eef0ff;color:#5b4bcf}
+.badge2{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;white-space:nowrap}
+.badge2.exist{background:var(--exist-soft);color:var(--exist)}
+.badge2.sugg{background:var(--sugg-soft);color:var(--sugg)}
+
+/* QA */
+.qa-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.qa-tools{padding:14px 24px 10px;border-bottom:1px solid var(--border-2);flex:none}
+.searchbox{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:0 14px;box-shadow:var(--shadow)}
+.searchbox input{flex:1;border:0;outline:0;padding:11px 0;font-size:14px;background:transparent;color:var(--text)}
+.searchbox .si{color:var(--sub);font-size:16px}
+.chips{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--panel);font-size:12px;cursor:pointer;color:var(--muted);font-weight:600}
+.chip:hover{border-color:var(--primary)}
+.chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.qa-count{font-size:12px;color:var(--muted);padding:9px 24px 2px}
+.qa-list{flex:1;overflow-y:auto;padding:6px 24px 28px}
+.qa-item{background:var(--panel);border:1px solid var(--border);border-radius:11px;margin-top:8px;overflow:hidden}
+.qa-q{padding:12px 15px;cursor:pointer;display:flex;align-items:flex-start;gap:11px;font-weight:600;font-size:13.5px}
+.qa-q:hover{background:var(--panel-2)}
+.qa-q .qmark{color:var(--primary);font-weight:800}
+.qa-q .badge{margin-left:auto;font-size:10px;padding:2px 9px;border-radius:20px;white-space:nowrap;font-weight:700}
+.badge.t-产品概述,.badge.t-模块清单,.badge.t-前置依赖{background:var(--primary-soft);color:var(--primary)}
+.badge.t-功能{background:#f0f0ff;color:#5b4bcf}
+.badge.t-联动{background:var(--exist-soft);color:var(--exist)}
+.badge.t-建议联动{background:var(--sugg-soft);color:var(--sugg)}
+.qa-a{display:none;padding:0 15px 14px 37px;color:var(--muted);font-size:12.5px;line-height:1.8}
+.qa-item.open .qa-a{display:block}
+.qa-a .meta{font-size:11px;color:var(--sub);margin-bottom:5px}
+.qa-item.open .qa-q{color:var(--primary)}
+.empty-state{padding:60px;text-align:center;color:var(--sub)}
+
+/* drawer */
+.drawer{position:absolute;top:0;right:0;width:380px;height:100%;background:var(--panel);border-left:1px solid var(--border);box-shadow:-12px 0 40px rgba(16,24,40,.1);transform:translateX(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);z-index:20;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.dr-head{padding:18px 20px 14px;border-bottom:1px solid var(--border-2);position:relative}
+.dr-head .close{position:absolute;right:14px;top:14px;border:0;background:var(--bg);width:28px;height:28px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:16px}
+.dr-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;color:#fff;margin-bottom:8px}
+.dr-head h3{font-size:18px;font-weight:750}
+.dr-head .ab{font-size:12px;color:var(--muted);margin-top:2px}
+.dr-tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--border-2);padding:0 14px;gap:6px;flex:none}
+.dr-tab{flex:none;white-space:nowrap;padding:9px 10px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.dr-tab.active{color:var(--primary);border-color:var(--primary)}
+.dr-body{padding:16px 20px;overflow-y:auto;flex:1}
+.sec{margin-bottom:18px}
+.sec h5{font-size:11px;letter-spacing:.7px;color:var(--sub);font-weight:800;margin-bottom:7px;border-left:3px solid var(--primary);padding-left:8px}
+.sec p{font-size:12.5px;color:var(--muted);line-height:1.8}
+.mod-chip{display:inline-block;font-size:11.5px;padding:4px 9px;background:var(--panel-2);border:1px solid var(--border-2);border-radius:7px;margin:3px 4px 3px 0;color:var(--text);cursor:pointer}
+.mod-chip:hover{border-color:var(--primary);color:var(--primary)}
+.link-row{font-size:12px;padding:8px 10px;border-radius:9px;margin-bottom:6px;line-height:1.6}
+.link-row.exist{background:var(--exist-soft);border-left:3px solid var(--exist)}
+.link-row.sugg{background:var(--sugg-soft);border-left:3px solid var(--sugg)}
+.link-row .dir{font-weight:800;font-size:10px;letter-spacing:.5px}
+.link-row.exist .dir{color:var(--exist)}
+.link-row.sugg .dir{color:var(--sugg)}
+.link-row .txt{color:var(--muted);margin-top:2px}
+/* 连线关联关系：谁引用谁 */
+.rel-flow{display:flex;align-items:stretch;gap:6px;margin-bottom:14px}
+.rel-node{flex:1;min-width:0;border-radius:10px;padding:9px 10px;border:1px solid var(--border-2);background:var(--panel-2)}
+.rel-node.exist{border-left:3px solid var(--exist)}
+.rel-node.sugg{border-left:3px solid var(--sugg)}
+.rel-node .rel-role{display:block;font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--muted);margin-bottom:4px}
+.rel-node b{font-size:11.5px;color:var(--text);line-height:1.45;display:block;word-break:break-all}
+.rel-arrow{align-self:center;font-size:9px;font-weight:800;white-space:nowrap;color:var(--exist)}
+.rel-arrow.sugg{color:var(--sugg)}
+.kv{display:flex;gap:8px;font-size:12px;margin:6px 0}
+.kv .k{color:var(--sub);min-width:64px}
+.kv .v{color:var(--text);word-break:break-all}
+.dim-note{background:var(--primary-soft);border:1px solid #d4e2ff;border-radius:9px;padding:9px 11px;font-size:11.5px;color:#1d4ed8;margin-bottom:14px}
+/* modal */
+.modal-mask{position:absolute;inset:0;background:rgba(16,24,40,.35);z-index:40;display:none;align-items:center;justify-content:center}
+.modal-mask.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:560px;max-width:92%;max-height:88%;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);padding:22px}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgrid .full{grid-column:1/-1}
+.fgrid label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;font-weight:600}
+.fgrid input,.fgrid select,.fgrid textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--text);font-family:inherit}
+.fgrid textarea{resize:vertical;min-height:56px}
+.modal .acts{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#d7deea;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><div class="mark">MOM</div><div><h1>产品知识图谱</h1><div class="sub">MOM · 研发知识库</div></div></div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="nav">
+      <div class="nav-title">工作区</div>
+      <div class="nav-item active" data-view="graph"><span class="ico">◉</span>知识图谱</div>
+      <div class="nav-item" data-view="trace"><span class="ico">↳</span>业务全追溯</div>
+      <div class="nav-item" data-view="interface"><span class="ico">⇄</span>接口管理 <span class="cnt" id="ifCnt"></span></div>
+      <div class="nav-item" data-view="qa"><span class="ico">◎</span>功能问答库 <span class="cnt" id="qaCnt"></span></div>
+    </div>
+    <div class="side-sec">
+      <div class="hd">联动类型</div>
+      <label class="toggle"><input type="checkbox" id="tgExist" checked><span class="tg"></span><span class="tag-dot" style="background:var(--exist)"></span>现有</label>
+      <label class="toggle"><input type="checkbox" id="tgPlanning" checked><span class="tg"></span><span class="tag-dot" style="background:#2563eb"></span>规划</label>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h2 id="viewTitle">知识图谱</h2>
+      <div class="crumb" id="crumb"></div>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="exportIf" style="display:none">导出接口数据</button>
+    </div>
+
+    <div class="content">
+      <!-- Graph -->
+      <div class="view active" id="view-graph">
+        <div class="dim-bar">
+          <label>图谱维度</label>
+          <button class="icon-btn" id="graphFind" type="button">查找功能</button>
+          <button class="icon-btn" id="graphScenarios" type="button">业务场景</button>
+          <button class="icon-btn" id="graphAudit" type="button">核查总览</button>
+          <button class="icon-btn" id="graphBack" type="button" disabled>返回上一级</button>
+          <div class="seg" id="dimSeg" style="width:auto;flex:none">
+            <button data-dim="product" class="active">产品</button>
+            <button data-dim="module">业务模型</button>
+            <button data-dim="function">功能</button>
+          </div>
+          <label id="scopeLbl" style="display:none"><span id="scopeName">产品</span> <select id="scopeSel"></select></label>
+          <span id="graphScopePath" class="crumb"></span>
+          <label id="projectedOption" hidden title="查看由产品联动推导的模型或功能端点，实际对应关系需核验">
+            <input id="tgProjected" type="checkbox">显示待核验映射
+          </label>
+          <span style="font-size:11px;color:var(--sub)" id="graphStat"></span>
+        </div>
+        <section class="shared-foundation" id="sharedFoundation" aria-label="全产品共用">
+          <strong>全产品共用</strong>
+          <button class="icon-btn" type="button" data-shared-scope="shared-system">系统功能<small>角色权限、工作流审批、消息和调度</small></button>
+          <button class="icon-btn" type="button" data-shared-scope="shared-data">业务基础数据<small>组织、岗位、人员、物料和工厂模型</small></button>
+        </section>
+        <div class="graph-stage">
+          <div class="graph-wrap" id="graphWrap">
+            <div class="hint" id="graphHint">拖拽节点 · 滚轮缩放 · 点击节点查看详情 · 点击连线查看联动</div>
+            <svg id="graph"></svg>
+            <div class="legend" id="legend"></div>
+            <div class="graph-tools">
+              <button id="zin" title="放大">＋</button>
+              <button id="zout" title="缩小">－</button>
+              <button id="zreset" title="重置">⌖</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Business trace -->
+      <div class="view" id="view-trace">
+        <form id="traceForm" class="if-tools">
+          <label for="traceType">查询数据类型</label>
+          <select id="traceType"><option value="">请选择</option><option value="master">基础数据</option><option value="business">业务数据</option><option value="feature">功能</option></select>
+          <label id="traceCategoryLabel" for="traceCategory">细分类</label>
+          <select id="traceCategory" disabled></select>
+          <label id="traceTargetLabel" for="traceQuery" hidden>对象编号</label>
+          <input id="traceQuery" hidden maxlength="120">
+          <label for="traceFeature" id="traceFeatureLabel" hidden>业务功能</label>
+          <select id="traceFeature" hidden></select>
+          <span id="traceFeatureOptions" class="trace-options" hidden>
+            <label for="traceDirection">方向</label>
+            <select id="traceDirection"><option value="both">上下游</option><option value="upstream">仅上游</option><option value="downstream">仅下游</option></select>
+            <label for="traceDepth">层数</label>
+            <select id="traceDepth"><option value="1">1 层</option><option value="2">2 层</option><option value="3">3 层</option><option value="5">5 层</option></select>
+            <label><input id="tracePlanning" type="checkbox">含规划</label>
+          </span>
+          <button class="icon-btn" type="submit" id="traceSubmit" disabled>查询</button>
+          <button class="icon-btn" type="button" id="traceDemo" hidden>查看原型</button>
+        </form>
+        <details class="trace-requirements" id="traceRequirements">
+          <summary>真实数据接入要求</summary>
+          <div id="traceRequirementBody"></div>
+        </details>
+        <div id="traceStatus" class="if-count" role="status">请先选择查询数据类型。</div>
+        <div id="traceCanvas" class="trace-canvas" aria-label="业务数据流向图"></div>
+        <section id="traceDetails" class="trace-details" aria-label="追溯详情" hidden></section>
+      </div>
+
+      <!-- Interface -->
+      <div class="view" id="view-interface">
+        <div class="if-wrap">
+          <div class="if-tools">
+            <input id="ifSearch" placeholder="搜索接口编号、名称、产品、功能或备注">
+            <select id="ifType"><option value="">全部类型</option><option>现有联动</option><option>MOM建议</option></select>
+            <select id="ifStatus"><option value="">全部状态</option><option>待补充明细</option><option>规划待补充</option><option>已完善</option></select>
+            <select id="ifAudit" aria-label="接口核查范围">
+              <option value="">全部核查范围</option>
+              <option value="details">技术明细有空项</option>
+              <option value="pending">功能映射待核验</option>
+              <option value="rejected">历史端点不匹配</option>
+              <option value="direction">登记方向与历史映射不同</option>
+              <option value="productDirection">产品方向缺少依据</option>
+            </select>
+            <button class="icon-btn primary" id="ifAdd">＋ 新增接口</button>
+          </div>
+          <div class="if-count" id="ifCount" role="status"></div>
+          <div class="if-list" id="ifList"></div>
+        </div>
+      </div>
+
+      <!-- QA -->
+      <div class="view" id="view-qa">
+        <div class="qa-wrap">
+          <div class="qa-tools">
+            <div class="searchbox"><span class="si">⌕</span><input id="qaSearch" placeholder="搜索功能、模块、产品、联动问题，例如：设备管理 前置依赖 / 放行审批"></div>
+            <div class="chips" id="qaChips"></div>
+          </div>
+          <div class="qa-count">
+            <span id="qaCount" role="status"></span>
+            <button class="icon-btn" id="qaPrev" type="button">上一页</button>
+            <button class="icon-btn" id="qaNext" type="button">下一页</button>
+          </div>
+          <div class="qa-list" id="qaList"></div>
+        </div>
+      </div>
+
+      <!-- drawer -->
+      <div class="drawer" id="drawer">
+        <div class="dr-head"><button class="close" id="drClose">×</button><span class="dr-badge" id="drBadge"></span><h3 id="drTitle"></h3><div class="ab" id="drSub"></div></div>
+        <div class="dr-tabs" id="drTabs"></div>
+        <div class="dr-body" id="drBody"></div>
+      </div>
+
+      <!-- modal -->
+      <div class="modal-mask" id="modalMask">
+        <div class="modal">
+          <h3 id="modalTitle">编辑接口</h3>
+          <div class="fgrid" id="modalForm"></div>
+          <div class="acts"><button class="icon-btn" id="modalCancel">取消</button><button class="icon-btn primary" id="modalSave">保存</button></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>
